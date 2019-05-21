@@ -1,0 +1,135 @@
+addpath('./data');
+addpath('./minFunc');
+
+clear all;
+load('SmarterML_Training.mat');
+X = feature;
+y = label+1
+disp(size(X));
+disp(size(y));
+
+%% ============================== Describe ==============================
+plot(X(y==1,1), X(y==1,5), 'b+'); hold on;
+plot(X(y==0,1), X(y==0,5), 'ro')
+legend('investor', 'Non-investor')
+xlabel('Feature_01'); ylabel('Feature_02')
+
+%% ================================= PCA =================================
+X = zscore(X);
+[coefs, Xpca, variances] = pca(X);
+figure; plotData(Xpca(:,1:2), y)
+title('PCA'); legend('Investor', 'Non-investor')
+
+%% ================================= LDA =================================
+[Xlda, mapping] = mylda(X, y, 2);
+figure; plotData(Xlda, y);
+title('LDA'); legend('0', '1')
+
+%% ================================ t-SNE ================================
+[Xtsne, loss] = tsne(X);
+figure; plotData(Xtsne, y)
+title('t-SNE'); legend('Investor', 'Non-investor')
+
+%% ============== Logistic Regression for multiple classes ===============
+% [m n] = size(X);
+% rand_indices = randperm(m);
+% figure; displayData(X(rand_indices(1:100), :));
+
+seed = 1;
+[Xtrain, Xval, Xtest] = splitData(X, [0.9; 0.05; 0.05], seed);
+[ytrain, yval, ytest] = splitData(y, [0.9; 0.05; 0.05], seed);
+
+lambda = 0.005;
+all_theta = trainLogisticReg(Xtrain, ytrain, lambda);
+
+ypredtrain = predictLogisticReg(all_theta, Xtrain);
+ypredval = predictLogisticReg(all_theta, Xval);
+ypredtest = predictLogisticReg(all_theta, Xtest);
+fprintf('Train Set Accuracy: %f\n', mean(ypredtrain==ytrain)*100) ;
+fprintf('Validation Set Accuracy: %f\n', mean(ypredval==yval)*100);
+fprintf('Test Set Accuracy: %f\n', mean(ypredtest==ytest)*100);
+
+% figure; displayData(Xtest(ypredtest~=ytest, :));
+
+%% ============= Softmax classification for multiple classes =============
+X = X'; y = y';
+
+seed = 1;
+[Xtrain, Xval, Xtest] = splitData(X, [0.6 0.3 0.1], seed);
+[ytrain, yval, ytest] = splitData(y, [0.6 0.3 0.1], seed);
+
+numClasses = 2;
+initial_theta = reshape(0.005 * randn(numClasses, size(X,1)), [], 1);
+
+lambda = 1e-4;
+[cost,grad] = costSoftmax(initial_theta, Xtrain(:,1:10), ytrain(1:10), numClasses, lambda);
+numGrad = checkGradient( @(p) costSoftmax(p, Xtrain(:,1:10), ytrain(1:10), numClasses, lambda), initial_theta);
+diff = norm(numGrad-grad)/norm(numGrad+grad) % Should be less than 1e-9
+
+lambda = 0.01;
+options = struct('display', 'on', 'Method', 'lbfgs', 'maxIter', 400);
+theta = trainSoftmax(Xtrain, ytrain, numClasses, lambda, options);
+
+ypredtrain = predictSoftmax(theta, Xtrain, numClasses);
+ypredval = predictSoftmax(theta, Xval, numClasses);
+ypredtest = predictSoftmax(theta, Xtest, numClasses);
+fprintf('Train Set Accuracy: %f\n', mean(ypredtrain==ytrain)*100) ;
+fprintf('Validation Set Accuracy: %f\n', mean(ypredval==yval)*100);
+fprintf('Test Set Accuracy: %f\n', mean(ypredtest==ytest)*100);
+
+%% ==================== Implementing Neural network ====================
+clear  all;
+
+% X = randn(8, 100);
+% y = randi(10, 1, 100);
+% 
+% parameters = []; % Reset the variable parameters
+% parameters.lambda = 0; % Weight decay penalty parameter
+% parameters.beta = 1; % sparsity penalty parameter
+% [theta thetaSize] = initNNParameters(8, 5, 10);
+%  
+% [cost,grad] = costNeuralNetwork(theta, thetaSize, X, y, parameters);
+% numGrad = checkGradient( @(p) costNeuralNetwork(p, thetaSize, X, y, parameters), theta);
+% diff = norm(numGrad-grad)/norm(numGrad+grad) % Should be less than 1e-9
+
+load('SmarterML_Training.mat'); % Gives X, y
+X = feature';
+y = label+1
+y=y'
+disp(size(X));
+disp(size(y));
+
+%X = X'; y = y';
+[Xtrain, Xval, Xtest] = splitData(X, [0.6 0.3 0.1], 0);
+[ytrain, yval, ytest] = splitData(y, [0.6 0.3 0.1], 0);
+
+parameters = []; % Reset the variable parameters
+parameters.lambda = 1e-2; % This is a tunable hyperparameter
+parameters.beta = 0.8; % This is a tunable hyperparameter
+numhid = 8; % % This is a tunable hyperparameter
+
+numvis = size(X, 1);
+numout = length(unique(y));
+[theta thetaSize] = initNNParameters(numvis, numhid, numout);
+
+costFunction = @(p) costNeuralNetwork(p, thetaSize, Xtrain, ytrain, parameters);
+
+tic
+options = struct('display', 'on', 'Method', 'lbfgs', 'MaxIter', 400); %400 number of iter
+[optTheta, optCost] = fmincg(costFunction, theta, options);
+toc
+
+[W1 W2 b1 b2] = theta2params(optTheta, thetaSize);
+% displayData(W1);
+
+ypredtrain = predictNeuralNetwork(optTheta, thetaSize, Xtrain);
+ypredval = predictNeuralNetwork(optTheta, thetaSize, Xval);
+ypredtest = predictNeuralNetwork(optTheta, thetaSize, Xtest);
+
+fprintf('Train Set Accuracy: %f\n', mean(ypredtrain==ytrain)*100);
+fprintf('Val Set Accuracy: %f\n', mean(ypredval==yval)*100);
+fprintf('Test Set Accuracy: %f\n', mean(ypredtest==ytest)*100);
+
+%%
+
+data =[X;y]

@@ -1,0 +1,10 @@
+APPS->Classification Learner->New Session->From workspace->data, use rows as variables, cross-validation folds = 5 so validation=100/5=20%->Start Session->Fine Tree->Train->Export Model
+
+view(trainedModel.ClassificationTree, 'Mode', 'graph')
+
+trainedModel.ClassificationTree
+Properties, Methods (let use method)
+doc predict (use doc to view funtions)
+
+mean(predict(trainedModel_01.ClassificationTree,X')==y')
+predict(trainedModel_01.ClassificationTree,X')
