@@ -1,8 +1,0 @@
-Quantative Research Methods
-Lab Instructions
-
-0. Download the lab files from black board and unzip it somewhere on your computer
-1. Open Matlab.
-2. Change the matlab path to where the files are located
-3. Open the file mlsmarter.m
-4. Run the parts in the code that you are interested in. First do these parts: 1, 4, 6, 7, 8, 9a, 9b, 12
